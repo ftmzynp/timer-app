@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/api_service.dart'; // ApiService importunu unutma
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -18,6 +19,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   String avatarId = "avatar_01.png"; // Varsayılan avatar
   bool acceptTerms = false;
+  bool isLoading = false;
+
+  final ApiService _apiService = ApiService();
 
   void _chooseAvatar() {
     final avatars = ["avatar_01.png", "avatar_02.png", "avatar_03.png"];
@@ -47,7 +51,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  void _registerUser() {
+  Future<void> _registerUser() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (!acceptTerms) {
@@ -58,19 +62,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     if (_passwordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Şifreler eşleşmiyor!")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Şifreler eşleşmiyor!")),
+      );
       return;
     }
 
-    // Backend API'ye gönderim burada yapılacak
-    print({
-      "email": _emailController.text,
-      "username": _usernameController.text,
-      "password": _passwordController.text,
-      "avatar_id": avatarId,
-      "provider": "local",
-    });
+    setState(() => isLoading = true);
+
+    try {
+      final response = await _apiService.registerUser(
+        username: _usernameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Kayıt başarılı: ${response['message'] ?? ''}")),
+      );
+
+      Navigator.pushReplacementNamed(context, "/login");
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Hata: $e")),
+      );
+    } finally {
+      setState(() => isLoading = false);
+    }
   }
 
   @override
@@ -150,11 +168,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       children: [
                         TextFormField(
                           controller: _emailController,
-                          decoration: const InputDecoration(labelText: "E-posta"),
+                          decoration:
+                              const InputDecoration(labelText: "E-posta"),
                           validator: (v) =>
                               v!.isEmpty ? "E-posta giriniz" : null,
                         ),
-
                         TextFormField(
                           controller: _usernameController,
                           decoration:
@@ -162,15 +180,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           validator: (v) =>
                               v!.isEmpty ? "Kullanıcı adı giriniz" : null,
                         ),
-
                         TextFormField(
                           controller: _passwordController,
                           obscureText: true,
                           decoration:
                               const InputDecoration(labelText: "Şifre"),
-                          validator: (v) => v!.isEmpty ? "Şifre giriniz" : null,
+                          validator: (v) =>
+                              v!.isEmpty ? "Şifre giriniz" : null,
                         ),
-
                         TextFormField(
                           controller: _confirmPasswordController,
                           obscureText: true,
@@ -209,26 +226,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               borderRadius: BorderRadius.circular(25),
                             ),
                           ),
-                          onPressed: _registerUser,
-                          child: Text(
-                            "Kayıt Ol",
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              color: colorScheme.onPrimary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // 🔹 Google login
-                        IconButton(
-                          onPressed: () {},
-                          icon: Icon(
-                            Icons.g_mobiledata,
-                            size: 40,
-                            color: colorScheme.primary,
-                          ),
+                          onPressed: isLoading ? null : _registerUser,
+                          child: isLoading
+                              ? const CircularProgressIndicator(
+                                  color: Colors.white,
+                                )
+                              : Text(
+                                  "Kayıt Ol",
+                                  style: theme.textTheme.bodyLarge?.copyWith(
+                                    color: colorScheme.onPrimary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                         ),
 
                         const SizedBox(height: 20),

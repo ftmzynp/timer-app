@@ -30,7 +30,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Timer App',
       theme: themeProvider.theme,
-      initialRoute: AppRoutes.home, // ilk test için Register açılacak
+      initialRoute: AppRoutes.register, // ilk test için Register açılacak
       onGenerateRoute: AppRoutes.generateRoute,
     );
   }
