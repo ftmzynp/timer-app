@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:timer/models/user_model.dart';
+import 'package:timer/services/auth_storage.dart';
+import 'package:timer/services/api_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -8,40 +11,72 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // Mock user data (backend’den gelecek)
-  String avatarUrl = "https://i.pravatar.cc/150?img=8";
-  final String username = "Sophia B."; // 🔹 değiştirilemez
-  final TextEditingController emailController =
-      TextEditingController(text: "sophia@example.com");
-  final TextEditingController bioController =
-      TextEditingController(text: "Computer science student at University");
-
-  // Şifre alanları
-  final TextEditingController oldPasswordController = TextEditingController();
-  final TextEditingController newPasswordController = TextEditingController();
-  final TextEditingController confirmPasswordController =
-      TextEditingController();
-
+  AppUser? user;
   bool isEditing = false;
   bool showPasswordFields = false;
 
-  void _saveProfile() {
+  // Controllers
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController bioController = TextEditingController();
+  final TextEditingController oldPasswordController = TextEditingController();
+  final TextEditingController newPasswordController = TextEditingController();
+  final TextEditingController confirmPasswordController = TextEditingController();
+
+  final ApiService _apiService = ApiService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final currentUser = await AuthStorage.getUser();
+    if (currentUser != null) {
+      setState(() {
+        user = currentUser;
+        emailController.text = currentUser.email;
+        bioController.text = ""; // backend bio alanı eklenirse buraya yazılır
+      });
+    }
+  }
+
+  Future<void> _saveProfile() async {
     setState(() {
       isEditing = false;
       showPasswordFields = false;
     });
 
-    // 🔹 Burada backend'e güncelleme isteği atabilirsin
-    // örn: ApiService.updateProfile(email, bio, newPassword)
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Profil güncellendi ✅")),
-    );
+    // 🔹 Backend güncelleme (örnek)
+    try {
+      // şimdilik sadece UI mock
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Profil güncellendi ✅")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Profil güncellenemedi: $e")),
+      );
+    }
+  }
+
+  Future<void> _logout() async {
+    await AuthStorage.clearAll();
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, "/login");
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -70,20 +105,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: GestureDetector(
                 onTap: () {
                   if (isEditing) {
-                    // 🔹 Avatar değiştirme için image picker eklenebilir
+                    // 🔹 avatar değiştirilebilir (image picker eklenebilir)
                   }
                 },
                 child: CircleAvatar(
                   radius: 50,
-                  backgroundImage: NetworkImage(avatarUrl),
+                  backgroundImage: AssetImage(
+                    "assets/avatars/${user!.avatarId ?? "avatar_01.png"}",
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 20),
 
-            // Kullanıcı adı (sadece gösterim)
+            // Kullanıcı adı
             Text(
-              username,
+              user!.username,
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: colorScheme.onSurface,
@@ -115,7 +152,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Şifre değiştirme toggle
+            // Şifre değiştir switch
             if (isEditing)
               SwitchListTile(
                 title: const Text("Şifreyi değiştir"),
@@ -167,6 +204,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   foregroundColor: colorScheme.onPrimary,
                 ),
               ),
+
+            const SizedBox(height: 30),
+
+            // 🔹 Çıkış yap butonu
+            ElevatedButton.icon(
+              onPressed: _logout,
+              icon: const Icon(Icons.logout),
+              label: const Text("Çıkış Yap"),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 50),
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+            ),
           ],
         ),
       ),

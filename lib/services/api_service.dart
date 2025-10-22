@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:timer/models/user_model.dart';
+import 'package:timer/services/auth_storage.dart';
 
 class ApiService {
   final String baseUrl = dotenv.env['API_BASE_URL'] ?? '';
@@ -60,10 +62,8 @@ class ApiService {
 
   }
   Future<Map<String, dynamic>> loginUser({
-  required String username,
   required String email,
   required String password,
-  required String confirmPassword,
 }) async {
   final url = Uri.parse('$baseUrl/auth/login');
 
@@ -73,17 +73,25 @@ class ApiService {
       'Content-Type': 'application/json',
     },
     body: jsonEncode({
-      "username": username,
       "email": email,
       "password": password,
-      "confirmPassword": confirmPassword,
     }),
   );
 
   if (response.statusCode == 200) {
-    return jsonDecode(response.body);
+    final data = jsonDecode(response.body);
+
+    final user = data['data']['user'];
+    final token = data['data']['token'];
+
+    // 🔹 burada token ve user’ı sakla
+    await AuthStorage.saveToken(token);
+    await AuthStorage.saveUser(AppUser.fromJson(user));
+
+    return data;
   } else {
     throw Exception('Giriş başarısız: ${response.body}');
   }
+
 }
 }

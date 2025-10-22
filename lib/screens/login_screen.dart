@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/api_service.dart'; // ApiService dosyan nerede ise import et
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,22 +12,43 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool isLoading = false;
 
-  void _loginUser() {
+  final ApiService _apiService = ApiService();
+
+  Future<void> _loginUser() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Backend login request burada olacak
-    print({
-      "username": _usernameController.text,
-      "password": _passwordController.text,
-    });
+    setState(() => isLoading = true);
+
+    try {
+      final response = await _apiService.loginUser(
+        email: _emailController.text, // Backend login email'i zorunlu tutmuyorsa boş geçilebilir
+        password: _passwordController.text,
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("✅ Giriş başarılı: ${response['message'] ?? ''}")),
+      );
+
+      // 🔹 Örneğin ana sayfaya yönlendir
+      Navigator.pushReplacementNamed(context, "/home");
+
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("❌ Giriş hatası: $e")),
+      );
+      debugPrint("❌ Login error: $e");
+    } finally {
+      setState(() => isLoading = false);
+    }
   }
 
   void _loginWithGoogle() {
-    // Burada Google Auth işlemi yapılacak
-    print("Google ile giriş yapıldı!");
+    // Google Auth entegrasyonu
+    debugPrint("Google ile giriş yapılacak...");
   }
 
   @override
@@ -91,13 +113,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         TextFormField(
-                          controller: _usernameController,
+                          controller: _emailController,
                           decoration: InputDecoration(
-                            labelText: "Kullanıcı Adı",
+                            labelText: "Mail Adresi",
                             labelStyle: TextStyle(color: colorScheme.onSurface),
                           ),
                           validator: (v) =>
-                              v!.isEmpty ? "Kullanıcı adı giriniz" : null,
+                              v!.isEmpty ? "Mailinizi giriniz" : null,
                         ),
 
                         const SizedBox(height: 16),
@@ -111,6 +133,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           validator: (v) => v!.isEmpty ? "Şifre giriniz" : null,
                         ),
+
                         const SizedBox(height: 60),
 
                         // 🔹 Giriş Yap Butonu
@@ -123,14 +146,16 @@ class _LoginScreenState extends State<LoginScreen> {
                               borderRadius: BorderRadius.circular(25),
                             ),
                           ),
-                          onPressed: _loginUser,
-                          child: Text(
-                            "Giriş Yap",
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              color: colorScheme.onPrimary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          onPressed: isLoading ? null : _loginUser,
+                          child: isLoading
+                              ? const CircularProgressIndicator(color: Colors.white)
+                              : Text(
+                                  "Giriş Yap",
+                                  style: theme.textTheme.bodyLarge?.copyWith(
+                                    color: colorScheme.onPrimary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                         ),
 
                         const SizedBox(height: 20),

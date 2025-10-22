@@ -1,80 +1,55 @@
 import 'package:flutter/material.dart';
+import 'package:timer/models/user_model.dart';
+import '../services/auth_storage.dart';
 
-class AppDrawer extends StatelessWidget {
+class AppDrawer extends StatefulWidget {
   final String currentRoute;
 
-  const AppDrawer({
-    super.key,
-    required this.currentRoute,
-  });
+  const AppDrawer({super.key, required this.currentRoute});
+
+  @override
+  State<AppDrawer> createState() => _AppDrawerState();
+}
+
+class _AppDrawerState extends State<AppDrawer> {
+  AppUser? user;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final u = await AuthStorage.getUser();
+    setState(() => user = u);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final String userName = "Sophia B.";
-    final String avatarUrl = "https://i.pravatar.cc/150?img=2";
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-
-    Widget buildMenuItem({
-      required String title,
-      required IconData icon,
-      required String route,
-    }) {
-      final bool isSelected = currentRoute == route;
-
-      return Container(
-        decoration: isSelected
-            ? BoxDecoration(
-                color: colorScheme.primary.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(8),
-              )
-            : null,
-        child: ListTile(
-          leading: Icon(
-            icon,
-            color: isSelected ? colorScheme.primary : colorScheme.onSurface,
-          ),
-          title: Text(
-            title,
-            style: TextStyle(
-              color: isSelected ? colorScheme.primary : colorScheme.onSurface,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-          onTap: () {
-            if (!isSelected) {
-              Navigator.pushReplacementNamed(context, route);
-            } else {
-              Navigator.pop(context);
-            }
-          },
-        ),
-      );
-    }
 
     return Drawer(
       backgroundColor: colorScheme.surface,
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          // 🔹 Header (üst-alt boşluk eklenmiş)
+          // Header
           Container(
-            color: colorScheme.surface,
             padding: const EdgeInsets.only(top: 50, bottom: 16, left: 20, right: 16),
             child: GestureDetector(
-              onTap: () {
-                Navigator.pushNamed(context, "/profile");
-              },
+              onTap: () => Navigator.pushNamed(context, "/profile"),
               child: Row(
                 children: [
                   CircleAvatar(
                     radius: 34,
-                    backgroundImage: NetworkImage(avatarUrl),
-                    backgroundColor: colorScheme.onPrimary,
+                    backgroundImage: user?.avatarId != null
+                        ? AssetImage("assets/avatars/${user!.avatarId!}")
+                        : const AssetImage("assets/avatars/avatar_01.png"),
                   ),
                   const SizedBox(width: 12),
                   Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -84,7 +59,7 @@ class AppDrawer extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        userName,
+                        user?.username ?? "Misafir",
                         style: theme.textTheme.titleMedium?.copyWith(
                           color: colorScheme.onSurface,
                           fontWeight: FontWeight.bold,
@@ -97,29 +72,58 @@ class AppDrawer extends StatelessWidget {
               ),
             ),
           ),
+          Divider(color: colorScheme.onSurface.withOpacity(0.1)),
 
-          // 🔹 İnce ayırıcı çizgi
-          Divider(
-            height: 0.5,
-            thickness: 0.3,
-            color: colorScheme.onSurface.withOpacity(0.1),
-          ),
+          // Menü itemleri
+          _buildMenuItem(context, "Zamanlayıcı", Icons.timer, "/home"),
+          _buildMenuItem(context, "Pomodoro", Icons.access_time, "/pomodoro"),
+          _buildMenuItem(context, "Odalar", Icons.room, "/rooms"),
+          _buildMenuItem(context, "İstatistikler", Icons.bar_chart, "/stats"),
+          _buildMenuItem(context, "Ayarlar", Icons.settings, "/settings"),
 
-          // 🔹 Menü itemleri
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Column(
-              children: [
-                buildMenuItem(title: "Zamanlayıcı", icon: Icons.timer, route: "/home"),
-                buildMenuItem(title: "Pomodoro", icon: Icons.access_time, route: "/pomodoro"),
-                buildMenuItem(title: "Odalar", icon: Icons.room, route: "/rooms"),
-                buildMenuItem(title: "İstatistikler", icon: Icons.bar_chart, route: "/stats"),
-                buildMenuItem(title: "Ayarlar", icon: Icons.settings, route: "/settings"),
-               
-              ],
-            ),
-          ),
+          ListTile(
+            leading: const Icon(Icons.logout),
+            title: const Text("Çıkış Yap"),
+            onTap: () async {
+              await AuthStorage.clearAll();
+              if (context.mounted) {
+                Navigator.pushNamedAndRemoveUntil(context, "/login", (_) => false);
+              }
+            },
+          )
         ],
+      ),
+    );
+  }
+
+  Widget _buildMenuItem(BuildContext ctx, String title, IconData icon, String route) {
+    final theme = Theme.of(ctx);
+    final colorScheme = theme.colorScheme;
+    final bool isSelected = widget.currentRoute == route;
+
+    return Container(
+      decoration: isSelected
+          ? BoxDecoration(
+              color: colorScheme.primary.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(8),
+            )
+          : null,
+      child: ListTile(
+        leading: Icon(icon, color: isSelected ? colorScheme.primary : colorScheme.onSurface),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: isSelected ? colorScheme.primary : colorScheme.onSurface,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        onTap: () {
+          if (!isSelected) {
+            Navigator.pushReplacementNamed(ctx, route);
+          } else {
+            Navigator.pop(ctx);
+          }
+        },
       ),
     );
   }
