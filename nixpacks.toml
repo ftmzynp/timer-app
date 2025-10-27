@@ -5,4 +5,4 @@
 nixpkgsArchive = "nixos-24.05" 
 
 # Bu da artık 'dart-sdk' paketinin modern bir sürümünü kuracaktır
-nixPkgs = ["dart-sdk"]
+nixPkgs = ["dart"]
