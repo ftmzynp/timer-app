@@ -1,8 +1,11 @@
-# nixpacks.toml
-
 [phases.setup]
-# Bu satır, Nixpacks'e Mayıs 2024'ten (veya daha yeni) bir paket seti kullanmasını söyler
-nixpkgsArchive = "nixos-24.05" 
+nixPkgs = ["dart_3_9"]
 
-# Bu da artık 'dart-sdk' paketinin modern bir sürümünü kuracaktır
-nixPkgs = ["dart"]
+[phases.install]
+cmds = ["dart pub get"]
+
+[phases.build]
+cmds = ["dart compile exe bin/timer.dart"]
+
+[start]
+cmd = "./bin/timer.exe"
